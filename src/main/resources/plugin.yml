@@ -1,0 +1,13 @@
+name: FantaHomes
+version: 1.0.0
+main: net.fantasmp.homes.FantaHomes
+api-version: '1.21'
+commands:
+  home:
+    description: Your homes
+    aliases: [homes]
+permissions:
+  fantahomes.use:
+    default: true
+  fantahomes.unlimited:
+    default: op
