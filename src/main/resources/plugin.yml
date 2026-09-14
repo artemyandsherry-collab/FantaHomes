@@ -1,13 +1,29 @@
 name: FantaHomes
-version: 1.0.0
+version: '${project.version}'
 main: net.fantasmp.homes.FantaHomes
 api-version: '1.21'
+author: FantaSMP
+description: Dialog-based homes for FantaSMP.
+
 commands:
   home:
-    description: Your homes
+    description: Open your homes menu
+    usage: /home
     aliases: [homes]
+
 permissions:
   fantahomes.use:
+    description: Open the homes menu
     default: true
+  fantahomes.limit.10:
+    description: 10 homes
+    default: false
+  fantahomes.limit.20:
+    description: 20 homes
+    default: false
+  fantahomes.limit.60:
+    description: 60 homes
+    default: false
   fantahomes.unlimited:
-    default: op
+    description: Unlimited homes
+    default: false
