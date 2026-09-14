@@ -22,7 +22,8 @@ import java.util.Locale;
 /** Every dialog screen the plugin shows. */
 public final class Menus {
 
-    private static final int GRID_COLUMNS = 6;
+    private static final int GRID_COLUMNS = 1;
+    private static final int PAGE_SIZE = 5;
     private static final int ICONS_PER_PAGE = 60;
 
     private final FantaHomes plugin;
@@ -35,36 +36,77 @@ public final class Menus {
 
     /** The homes grid: one button per home, then a New Home button per free slot. */
     public void openHomes(Player player) {
+        openHomes(player, 0);
+    }
+
+    /** The homes grid, paged: shows PAGE_SIZE entries plus a "More homes" button. */
+    public void openHomes(Player player, int page) {
         List<Home> homes = plugin.store().get(player.getUniqueId());
         int limit = plugin.limitFor(player);
 
+        // One trailing "New Home" slot while the player is under their limit.
+        int newSlots = homes.size() < limit ? 1 : 0;
+        int totalEntries = homes.size() + newSlots;
+
+        int pages = Math.max(1, (int) Math.ceil(totalEntries / (double) PAGE_SIZE));
+        if (page < 0) page = 0;
+        if (page >= pages) page = pages - 1;
+
+        int from = page * PAGE_SIZE;
+        int to = Math.min(totalEntries, from + PAGE_SIZE);
+
         List<ActionButton> buttons = new ArrayList<>();
 
-        for (Home home : homes) {
-            buttons.add(ActionButton.builder(
-                            Component.text(home.getName(), NamedTextColor.WHITE))
-                    .tooltip(Component.text("Click to manage", NamedTextColor.GRAY))
-                    .width(98)
+        for (int i = from; i < to; i++) {
+            if (i < homes.size()) {
+                final Home home = homes.get(i);
+                buttons.add(ActionButton.builder(
+                                Component.text(home.getName(), NamedTextColor.WHITE))
+                        .tooltip(Component.text("Click to manage", NamedTextColor.GRAY))
+                        .width(150)
+                        .action(DialogAction.customClick((view, audience) ->
+                                openManage(player, home), ClickCallback.Options.builder().build()))
+                        .build());
+            } else {
+                buttons.add(ActionButton.builder(
+                                Component.text("+ New Home", NamedTextColor.GREEN))
+                        .tooltip(Component.text("Save your current position", NamedTextColor.DARK_GRAY))
+                        .width(150)
+                        .action(DialogAction.customClick((view, audience) ->
+                                createHere(player), ClickCallback.Options.builder().build()))
+                        .build());
+            }
+        }
+
+        final int cur = page;
+        if (page > 0) {
+            buttons.add(ActionButton.builder(Component.text("< Back", NamedTextColor.GRAY))
+                    .width(150)
                     .action(DialogAction.customClick((view, audience) ->
-                            openManage(player, home), ClickCallback.Options.builder().build()))
+                            openHomes(player, cur - 1), ClickCallback.Options.builder().build()))
+                    .build());
+        }
+        if (page < pages - 1) {
+            buttons.add(ActionButton.builder(Component.text("More homes >", NamedTextColor.YELLOW))
+                    .width(150)
+                    .action(DialogAction.customClick((view, audience) ->
+                            openHomes(player, cur + 1), ClickCallback.Options.builder().build()))
                     .build());
         }
 
-        int free = Math.max(0, limit - homes.size());
-        for (int i = 0; i < free; i++) {
-            buttons.add(ActionButton.builder(
-                            Component.text("New Home", NamedTextColor.GRAY))
-                    .tooltip(Component.text("Save your current position", NamedTextColor.DARK_GRAY))
-                    .width(98)
-                    .action(DialogAction.customClick((view, audience) ->
-                            openCreate(player), ClickCallback.Options.builder().build()))
-                    .build());
-        }
-
+        // Icon + name for each home on this page, so every row shows its real item.
         List<DialogBody> body = new ArrayList<>();
+        for (int i = from; i < to && i < homes.size(); i++) {
+            Home home = homes.get(i);
+            body.add(DialogBody.item(new ItemStack(home.getIcon()))
+                    .description(DialogBody.plainMessage(
+                            Component.text(home.getName(), NamedTextColor.WHITE)))
+                    .build());
+        }
         body.add(DialogBody.item(new ItemStack(Material.WHITE_BED))
                 .description(DialogBody.plainMessage(
-                        Component.text(homes.size() + " / " + limit + " homes",
+                        Component.text(homes.size() + " / " + limit + " homes"
+                                + (pages > 1 ? "   (page " + (page + 1) + " of " + pages + ")" : ""),
                                 NamedTextColor.GRAY)))
                 .build());
 
@@ -82,64 +124,34 @@ public final class Menus {
 
     // ---------------------------------------------------------------- create
 
-    private void openCreate(Player player) {
+    /** One click = home saved right here, auto-named. Rename later from manage. */
+    private void createHere(Player player) {
         int limit = plugin.limitFor(player);
-        if (plugin.store().get(player.getUniqueId()).size() >= limit) {
+        List<Home> homes = plugin.store().get(player.getUniqueId());
+        if (homes.size() >= limit) {
             player.sendMessage(Component.text("You have reached your home limit ("
                     + limit + ").", NamedTextColor.RED));
             return;
         }
 
-        Dialog dialog = Dialog.create(b -> b.empty()
-                .base(DialogBase.builder(Component.text("New Home", NamedTextColor.GREEN))
-                        .body(List.of(DialogBody.item(new ItemStack(Material.WHITE_BED)).build()))
-                        .inputs(List.of(DialogInput.text("name",
-                                        Component.text("Name", NamedTextColor.WHITE))
-                                .maxLength(24)
-                                .width(200)
-                                .build()))
-                        .canCloseWithEscape(true)
-                        .build())
-                .type(DialogType.multiAction(List.of(
-                                ActionButton.builder(Component.text("Create", NamedTextColor.GREEN))
-                                        .width(98)
-                                        .action(DialogAction.customClick((view, audience) -> {
-                                            String name = view.getText("name");
-                                            createHome(player, name);
-                                        }, ClickCallback.Options.builder().build()))
-                                        .build(),
-                                ActionButton.builder(Component.text("Back", NamedTextColor.GRAY))
-                                        .width(98)
-                                        .action(DialogAction.customClick((view, audience) ->
-                                                openHomes(player), ClickCallback.Options.builder().build()))
-                                        .build()))
-                        .columns(2)
-                        .build()));
+        String name = nextFreeName(player);
+        if (!plugin.store().add(player.getUniqueId(), name, player.getLocation())) {
+            player.sendMessage(Component.text("Could not create that home.", NamedTextColor.RED));
+            return;
+        }
 
-        player.showDialog(dialog);
+        player.sendMessage(Component.text("Home '" + name
+                + "' created. Click it to rename or change its icon.", NamedTextColor.GREEN));
+        openHomes(player);
     }
 
-    private void createHome(Player player, String rawName) {
-        String name = rawName == null ? "" : rawName.trim();
-        if (name.isEmpty()) name = "Home " + (plugin.store().get(player.getUniqueId()).size() + 1);
-
-        if (name.length() > 24) name = name.substring(0, 24);
-
-        int limit = plugin.limitFor(player);
-        if (plugin.store().get(player.getUniqueId()).size() >= limit) {
-            player.sendMessage(Component.text("You have reached your home limit ("
-                    + limit + ").", NamedTextColor.RED));
-            return;
+    /** First unused "Home N". */
+    private String nextFreeName(Player player) {
+        for (int i = 1; i <= 1001; i++) {
+            String candidate = "Home " + i;
+            if (plugin.store().byName(player.getUniqueId(), candidate) == null) return candidate;
         }
-
-        if (!plugin.store().add(player.getUniqueId(), name, player.getLocation())) {
-            player.sendMessage(Component.text("You already have a home called '"
-                    + name + "'.", NamedTextColor.RED));
-            return;
-        }
-
-        player.sendMessage(Component.text("Home '" + name + "' set.", NamedTextColor.GREEN));
-        openHomes(player);
+        return "Home " + System.currentTimeMillis();
     }
 
     // ---------------------------------------------------------------- manage

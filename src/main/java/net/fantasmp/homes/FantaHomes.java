@@ -56,12 +56,12 @@ public final class FantaHomes extends JavaPlugin implements Listener {
      * fantahomes.unlimited wins outright.
      */
     public int limitFor(Player player) {
-        if (player.hasPermission("fantahomes.unlimited")) return 1000;
-
         int best = defaultLimit;
+        boolean unlimited = false;
         for (PermissionAttachmentInfo info : player.getEffectivePermissions()) {
             if (!info.getValue()) continue;
             String perm = info.getPermission();
+            if (perm.equals("fantahomes.unlimited")) { unlimited = true; continue; }
             if (!perm.startsWith(LIMIT_PREFIX)) continue;
             try {
                 int n = Integer.parseInt(perm.substring(LIMIT_PREFIX.length()));
@@ -70,7 +70,7 @@ public final class FantaHomes extends JavaPlugin implements Listener {
                 // not a numeric limit node
             }
         }
-        return best;
+        return unlimited ? 1000 : best;
     }
 
     @EventHandler
