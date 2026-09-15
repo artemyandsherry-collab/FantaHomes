@@ -7,7 +7,9 @@ import io.papermc.paper.registry.data.dialog.type.DialogType;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
@@ -30,6 +32,30 @@ public final class Menus {
 
     public Menus(FantaHomes plugin) {
         this.plugin = plugin;
+    }
+
+    // ---------------------------------------------------------------- icons
+
+    /**
+     * An inline item sprite, as used by vanilla dialogs (Adventure 4.25+ / MC 1.21.9+).
+     * Falls back to plain text if the running server is older.
+     */
+    private static Component sprite(Material material) {
+        try {
+            return Component.object(ObjectContents.sprite(
+                    Key.key("minecraft", "item/" + material.name().toLowerCase(Locale.ROOT))));
+        } catch (Throwable ignored) {
+            return Component.empty();
+        }
+    }
+
+    /** "<sprite> Name" for a button label. */
+    private static Component iconLabel(Material material, String text, NamedTextColor color) {
+        Component icon = sprite(material);
+        Component name = Component.text(text, color);
+        return icon.equals(Component.empty())
+                ? name
+                : icon.append(Component.text(" ")).append(name);
     }
 
     // ---------------------------------------------------------------- main grid
@@ -61,7 +87,7 @@ public final class Menus {
             if (i < homes.size()) {
                 final Home home = homes.get(i);
                 buttons.add(ActionButton.builder(
-                                Component.text(home.getName(), NamedTextColor.WHITE))
+                                iconLabel(home.getIcon(), home.getName(), NamedTextColor.WHITE))
                         .tooltip(Component.text("Click to manage", NamedTextColor.GRAY))
                         .width(150)
                         .action(DialogAction.customClick((view, audience) ->
@@ -69,7 +95,7 @@ public final class Menus {
                         .build());
             } else {
                 buttons.add(ActionButton.builder(
-                                Component.text("+ New Home", NamedTextColor.GREEN))
+                                iconLabel(Material.WHITE_BED, "New Home", NamedTextColor.GREEN))
                         .tooltip(Component.text("Save your current position", NamedTextColor.DARK_GRAY))
                         .width(150)
                         .action(DialogAction.customClick((view, audience) ->
@@ -94,15 +120,8 @@ public final class Menus {
                     .build());
         }
 
-        // Icon + name for each home on this page, so every row shows its real item.
+        // Buttons carry their own sprites now, so the body is just the counter.
         List<DialogBody> body = new ArrayList<>();
-        for (int i = from; i < to && i < homes.size(); i++) {
-            Home home = homes.get(i);
-            body.add(DialogBody.item(new ItemStack(home.getIcon()))
-                    .description(DialogBody.plainMessage(
-                            Component.text(home.getName(), NamedTextColor.WHITE)))
-                    .build());
-        }
         body.add(DialogBody.item(new ItemStack(Material.WHITE_BED))
                 .description(DialogBody.plainMessage(
                         Component.text(homes.size() + " / " + limit + " homes"
@@ -164,22 +183,22 @@ public final class Menus {
                         .canCloseWithEscape(true)
                         .build())
                 .type(DialogType.multiAction(List.of(
-                                ActionButton.builder(Component.text("Teleport", NamedTextColor.GREEN))
+                                ActionButton.builder(iconLabel(Material.ENDER_PEARL, "Teleport", NamedTextColor.GREEN))
                                         .width(98)
                                         .action(DialogAction.customClick((view, audience) ->
                                                 teleport(player, home), ClickCallback.Options.builder().build()))
                                         .build(),
-                                ActionButton.builder(Component.text("Change Icon", NamedTextColor.AQUA))
+                                ActionButton.builder(iconLabel(Material.ITEM_FRAME, "Change Icon", NamedTextColor.AQUA))
                                         .width(98)
                                         .action(DialogAction.customClick((view, audience) ->
                                                 openIconPicker(player, home, "", 0), ClickCallback.Options.builder().build()))
                                         .build(),
-                                ActionButton.builder(Component.text("Rename", NamedTextColor.YELLOW))
+                                ActionButton.builder(iconLabel(Material.NAME_TAG, "Rename", NamedTextColor.YELLOW))
                                         .width(98)
                                         .action(DialogAction.customClick((view, audience) ->
                                                 openRename(player, home), ClickCallback.Options.builder().build()))
                                         .build(),
-                                ActionButton.builder(Component.text("Delete", NamedTextColor.RED))
+                                ActionButton.builder(iconLabel(Material.BARRIER, "Delete", NamedTextColor.RED))
                                         .width(98)
                                         .action(DialogAction.customClick((view, audience) ->
                                                 openDelete(player, home), ClickCallback.Options.builder().build()))
@@ -279,7 +298,7 @@ public final class Menus {
                         .canCloseWithEscape(true)
                         .build())
                 .type(DialogType.multiAction(List.of(
-                                ActionButton.builder(Component.text("Delete", NamedTextColor.RED))
+                                ActionButton.builder(iconLabel(Material.BARRIER, "Delete", NamedTextColor.RED))
                                         .width(98)
                                         .action(DialogAction.customClick((view, audience) -> {
                                             plugin.store().remove(player.getUniqueId(), home);
@@ -314,7 +333,7 @@ public final class Menus {
         List<ActionButton> buttons = new ArrayList<>();
 
         for (Material m : matches.subList(from, to)) {
-            buttons.add(ActionButton.builder(Component.text(pretty(m), NamedTextColor.WHITE))
+            buttons.add(ActionButton.builder(iconLabel(m, pretty(m), NamedTextColor.WHITE))
                     .tooltip(Component.text("Use this icon", NamedTextColor.DARK_GRAY))
                     .width(98)
                     .action(DialogAction.customClick((view, audience) -> {
@@ -328,7 +347,7 @@ public final class Menus {
         }
 
         // Navigation row.
-        buttons.add(ActionButton.builder(Component.text("Search", NamedTextColor.AQUA))
+        buttons.add(ActionButton.builder(iconLabel(Material.SPYGLASS, "Search", NamedTextColor.AQUA))
                 .width(98)
                 .action(DialogAction.customClick((view, audience) -> {
                     String q = view.getText("search");
@@ -336,7 +355,7 @@ public final class Menus {
                 }, ClickCallback.Options.builder().build()))
                 .build());
 
-        buttons.add(ActionButton.builder(Component.text("Default", NamedTextColor.YELLOW))
+        buttons.add(ActionButton.builder(iconLabel(Material.WHITE_BED, "Default", NamedTextColor.YELLOW))
                 .width(98)
                 .action(DialogAction.customClick((view, audience) -> {
                     home.setIcon(Material.WHITE_BED);
