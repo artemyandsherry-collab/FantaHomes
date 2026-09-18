@@ -31,6 +31,7 @@ public final class FantaHomes extends JavaPlugin implements Listener {
 
         this.store = new HomeStore(this);
         this.sprites = new Sprites(new File(getDataFolder(), "sprites.txt"));
+        this.sprites.loadGlyphs(new File(getDataFolder(), "glyphs.txt"));
         this.icons = new IconIndex(sprites);
         this.menus = new Menus(this);
 
@@ -43,7 +44,8 @@ public final class FantaHomes extends JavaPlugin implements Listener {
         }
 
         getLogger().info("FantaHomes enabled. Default limit: " + defaultLimit
-                + ", sprites: " + sprites.size());
+                + ", icons: " + sprites.size()
+                + " (glyphs: " + sprites.glyphCount() + ")");
     }
 
     @Override

@@ -29,9 +29,47 @@ public final class Sprites {
 
     private final Map<Material, Component> icons = new EnumMap<>(Material.class);
     private boolean supported = true;
+    private int glyphs = 0;
 
     public Sprites(File file) {
         load(file);
+    }
+
+    /**
+     * Glyphs from the resource pack take priority: they are pre-rendered 3D icons,
+     * where a sprite is only a flat texture. Format: <material> <codepoint-hex>.
+     */
+    public void loadGlyphs(File file) {
+        if (file == null || !file.isFile()) return;
+
+        try (BufferedReader in = new BufferedReader(
+                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = in.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+
+                String[] parts = line.split("\\s+");
+                if (parts.length < 2) continue;
+
+                Material material = Material.matchMaterial(parts[0]);
+                if (material == null) continue;
+
+                try {
+                    int cp = Integer.parseInt(parts[1], 16);
+                    icons.put(material, Component.text(new String(Character.toChars(cp))));
+                    glyphs++;
+                } catch (NumberFormatException ignored) {
+                    // not a codepoint
+                }
+            }
+        } catch (Exception ignored) {
+            // no glyphs: sprites still apply
+        }
+    }
+
+    public int glyphCount() {
+        return glyphs;
     }
 
     private void load(File file) {
