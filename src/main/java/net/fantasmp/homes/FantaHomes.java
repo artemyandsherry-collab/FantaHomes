@@ -37,6 +37,10 @@ public final class FantaHomes extends JavaPlugin implements Listener {
 
         getServer().getPluginManager().registerEvents(this, this);
 
+        Explosions explosions = new Explosions(this);
+        getServer().getPluginManager().registerEvents(explosions, this);
+        getLogger().info("Explosions: " + explosions.summary());
+
         if (getConfig().getBoolean("import-simplehomes-on-start", true)) {
             File f = new File(getDataFolder().getParentFile(), "Simplehomes/homes.yml");
             int n = store.importFromSimplehomes(f);
