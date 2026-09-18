@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -49,7 +50,21 @@ public final class Sprites {
                 Material material = Material.matchMaterial(parts[0]);
                 if (material == null) continue;
 
-                Component icon = build(parts[1], parts[2]);
+                String atlas = parts[1];
+                String sprite = parts[2];
+
+                // Entity atlases hold unwrapped 3D model sheets, not icons: drawn
+                // into a 16px button they come out as a jumble. Substitute a flat
+                // texture where there is a sensible one, otherwise skip.
+                if (atlas.endsWith(":beds")) {
+                    String colour = material.name().toLowerCase(Locale.ROOT).replace("_bed", "");
+                    atlas = "minecraft:blocks";
+                    sprite = "minecraft:block/" + colour + "_wool";
+                } else if (atlas.endsWith(":chests") || atlas.endsWith(":shield_patterns")) {
+                    continue;
+                }
+
+                Component icon = build(atlas, sprite);
                 if (icon != null) icons.put(material, icon);
             }
         } catch (Exception ignored) {
