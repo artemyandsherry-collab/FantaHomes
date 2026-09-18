@@ -7,9 +7,7 @@ import io.papermc.paper.registry.data.dialog.type.DialogType;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
-import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
@@ -36,26 +34,11 @@ public final class Menus {
 
     // ---------------------------------------------------------------- icons
 
-    /**
-     * An inline item sprite, as used by vanilla dialogs (Adventure 4.25+ / MC 1.21.9+).
-     * Falls back to plain text if the running server is older.
-     */
-    private static Component sprite(Material material) {
-        try {
-            return Component.object(ObjectContents.sprite(
-                    Key.key("minecraft", "item/" + material.name().toLowerCase(Locale.ROOT))));
-        } catch (Throwable ignored) {
-            return Component.empty();
-        }
-    }
-
-    /** "<sprite> Name" for a button label. */
-    private static Component iconLabel(Material material, String text, NamedTextColor color) {
-        Component icon = sprite(material);
+    /** "<sprite> Name" for a button label, or plain text when the item has no sprite. */
+    private Component iconLabel(Material material, String text, NamedTextColor color) {
         Component name = Component.text(text, color);
-        return icon.equals(Component.empty())
-                ? name
-                : icon.append(Component.text(" ")).append(name);
+        Component icon = plugin.sprites().icon(material);
+        return icon == null ? name : icon.append(Component.text(" ")).append(name);
     }
 
     // ---------------------------------------------------------------- main grid

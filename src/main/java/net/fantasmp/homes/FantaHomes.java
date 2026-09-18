@@ -19,6 +19,7 @@ public final class FantaHomes extends JavaPlugin implements Listener {
 
     private HomeStore store;
     private IconIndex icons;
+    private Sprites sprites;
     private Menus menus;
 
     private int defaultLimit;
@@ -29,7 +30,8 @@ public final class FantaHomes extends JavaPlugin implements Listener {
         this.defaultLimit = getConfig().getInt("default-limit", 3);
 
         this.store = new HomeStore(this);
-        this.icons = new IconIndex();
+        this.sprites = new Sprites(new File(getDataFolder(), "sprites.txt"));
+        this.icons = new IconIndex(sprites);
         this.menus = new Menus(this);
 
         getServer().getPluginManager().registerEvents(this, this);
@@ -40,7 +42,8 @@ public final class FantaHomes extends JavaPlugin implements Listener {
             if (n > 0) getLogger().info("Imported " + n + " home(s) from Simplehomes.");
         }
 
-        getLogger().info("FantaHomes enabled. Default limit: " + defaultLimit);
+        getLogger().info("FantaHomes enabled. Default limit: " + defaultLimit
+                + ", sprites: " + sprites.size());
     }
 
     @Override
@@ -50,6 +53,7 @@ public final class FantaHomes extends JavaPlugin implements Listener {
 
     public HomeStore store() { return store; }
     public IconIndex icons() { return icons; }
+    public Sprites sprites() { return sprites; }
 
     /**
      * Highest fantahomes.limit.<n> the player holds, else the configured default.
